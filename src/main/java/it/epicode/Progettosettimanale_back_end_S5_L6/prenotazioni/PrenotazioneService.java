@@ -2,6 +2,7 @@ package it.epicode.Progettosettimanale_back_end_S5_L6.prenotazioni;
 
 import it.epicode.Progettosettimanale_back_end_S5_L6.dipendenti.DipendenteService;
 import it.epicode.Progettosettimanale_back_end_S5_L6.viaggi.ViaggioService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,7 @@ public class PrenotazioneService {
 
     public PrenotazioneResponse findById(Long id) {
         Prenotazione p = prenotazioneRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prenotazione non trovata"));
+                .orElseThrow(() -> new EntityNotFoundException("Prenotazione con id " + id + " non trovata"));
         return new PrenotazioneResponse(
                 p.getId(),
                 p.getViaggio().getDestinazione(),
@@ -47,7 +48,7 @@ public class PrenotazioneService {
     public PrenotazioneResponse save(@Valid PrenotazioneRequest request) {
         if (prenotazioneRepository.existsByDipendenteIdAndDataRichiesta(
                 request.getDipendenteId(), request.getDataRichiesta())) {
-            throw new RuntimeException("Dipendente già prenotato per quella data");
+            throw new IllegalStateException("Dipendente già prenotato per quella data");
         }
 
         Prenotazione p = new Prenotazione();
@@ -67,19 +68,21 @@ public class PrenotazioneService {
 
     public void delete(Long id) {
         Prenotazione p = prenotazioneRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prenotazione non trovata"));
+                .orElseThrow(() -> new EntityNotFoundException("Prenotazione con id " + id + " non trovata"));
         prenotazioneRepository.delete(p);
     }
 
     public PrenotazioneResponse update(Long id, @Valid PrenotazioneRequest request) {
         Prenotazione p = prenotazioneRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Prenotazione non trovata"));
+                .orElseThrow(() -> new EntityNotFoundException("Prenotazione con id " + id + " non trovata"));
+
         boolean alreadyBooked = prenotazioneRepository.existsByDipendenteIdAndDataRichiesta(
                 request.getDipendenteId(), request.getDataRichiesta());
         boolean isSameDipendente = p.getDipendente().getId().equals(request.getDipendenteId());
         boolean isSameData = p.getDataRichiesta().equals(request.getDataRichiesta());
+
         if (alreadyBooked && !(isSameDipendente && isSameData)) {
-            throw new RuntimeException("Dipendente già prenotato per quella data");
+            throw new IllegalStateException("Dipendente già prenotato per quella data");
         }
 
         p.setViaggio(viaggioService.getEntityById(request.getViaggioId()));
@@ -96,6 +99,4 @@ public class PrenotazioneService {
                 p.getDataRichiesta(),
                 p.getPreferenze());
     }
-
-
 }
